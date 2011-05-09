@@ -23,12 +23,17 @@
 #define L_Y		40
 
 #define LAN true
-#define DEBUG(stra) debug("%i:%s\n", (void*)__LINE__, (void*)stra);
+#define debug(stra) printf("debug: %i: %s\n", __LINE__, stra);
+#define error(stra) printf("error: %i: %s\n", __LINE__, stra);
+#define debugl(stra, strb)  \
+    string strc = string("debug: %i: ")+stra+string("\n"); \
+    printf(strc.c_str(), __LINE__, strb);
 
+#define DBUSER "data"
 #define DBTABLE "data"
 #define DOORSCRIPT "./ovi.sh"
 #define DBHOST1 "dalek.local"
-#define DBHOST2 "87.94.164.79"
+#define DBHOST2 "192.168.42.11"
 
 
 enum MODE { NUM, ACT };
@@ -61,24 +66,6 @@ inline std::string toString (const T& t)
     return ss.str();
 }
 
-void debug (string str){
-	printf(str.c_str());
-	if (str.compare("\n")) printf("\n");
-}
-void debug (char *str){
-	debug(string(str));
-}
-void debug (string str, void* val){
-	char strg[512];
-	sprintf (strg, str.c_str(), val);
-	debug(strg);
-}
-void debug (string str, void* val, void* val2){
-	char strg[512];
-	sprintf (strg, str.c_str(), val, val2);
-	debug(strg);
-}
-
 string rand_str_array(string arr) {
 	int x = arr.length(), y;
 	string temp;
@@ -94,6 +81,7 @@ string rand_str_array(string arr) {
 }
 
 int main ( int argc, char** argv ) {
+  printf(" type: row: msg\n ============= \n");
 	atexit(SDL_Quit);
 	if ( SDL_Init( SDL_INIT_VIDEO ) < 0 ) exit(-1);
 	string vals("0123456789abcdef");
@@ -106,11 +94,11 @@ int main ( int argc, char** argv ) {
 
 	debug("Alustetaan MySQL-yhteyttä");
 	mysql_init(&mysql);
-	debug("Haetaan yhteyttä sijaintiin %s", (void*)DBHOST1);
+	debugl("Haetaan yhteyttä sijaintiin %s", (void*)DBHOST1);
 	connection = mysql_real_connect(&mysql,DBHOST1,DBUSER,DBPASSWD,DBTABLE,0,0,0);
 	if (connection == NULL) {
-		debug("%s", (void*)mysql_error(&mysql));
-		debug("Yritetään uuteen sijaintiin %s", (void*)DBHOST2);
+		error((void*)mysql_error(&mysql));
+		debugl("Yritetään uuteen sijaintiin %s", (void*)DBHOST2);
 		mysql_kill(&mysql, 0);
 		debug("Tapettiin vanha yhteys");
 		mysql_init(&mysql);
@@ -154,6 +142,11 @@ int main ( int argc, char** argv ) {
 		keysFile.close();
 	}
 
+  for (int e = 0; e < keys.size(); e++) {
+    debug(keys[e].c_str());
+  }
+
+
 	gfxPrimitivesSetFont(SDL_gfx_font_10x20_fnt,10,20);
 	debug("Fontti vaihdettu");
 	startSec = reloadSec = time (NULL);
@@ -166,7 +159,7 @@ int main ( int argc, char** argv ) {
 		else if (!mp && mpk==1) mpk = 0;
 
 		usleep(200);
-		if (sec-reloadSec >= 10) {
+		if (sec-reloadSec >= 50) {
 			reloadSec = time(NULL);
 			mode = NUM;
 			reload = 0;
@@ -191,7 +184,7 @@ int main ( int argc, char** argv ) {
 						query += "','";
 						query += toString(nkey);
 						query += "')";
-						debug("Suoritetaan kysely '%s'", (void*)query.c_str());
+						debugl("Suoritetaan kysely '%s'", (void*)query.c_str());
 						if (mysql_query(&mysql, query.c_str())) {
 							debug("Tietokantaan ei saatu yhteyttä");
 						}
@@ -250,7 +243,7 @@ int main ( int argc, char** argv ) {
 				stringRGBA(screen, 10, SCREENH-30, lenghts[key.size()].c_str(), 255,255,255, 255);
 				for (int e = 0; e < keys.size(); e++) {
 					if (!keys[e].compare(key)) {
-						printf("Koodi löydetty: %s!\n", key.c_str());
+						debugl("Koodi löydetty: %s!\n", key.c_str());
 						nkey = key;
 						key.clear();
 						mode = ACT;
@@ -263,8 +256,7 @@ int main ( int argc, char** argv ) {
 	}
 	mysql_free_result(result);
 	mysql_close(connection);
-	DEBUG("Poistutaan ohjelmasta");
+	debug("Poistutaan ohjelmasta");
 	exit(1);
 	return 0;
 }
-
